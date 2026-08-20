@@ -8,22 +8,25 @@ public class CameraController : NetworkBehaviour
     [SerializeField] private Transform player;
     [SerializeField] private Transform weaponHolder; 
     [SerializeField] private float mouseSensitivity = 1;
-    [SerializeField] private float smoothness = 5f;
+    [Min(0f)] [SerializeField] private float maxMouseDelta = 25f;
 
     [SerializeField] private float maxAngleY = 80;
     [SerializeField] private float minAngleY = -80;
     [SerializeField] private Renderer[] localHiddenRenderers;
 
     private Vector2 camVelocity;
-    private Vector2 smoothVelocity;
     private MovementController movementController;
+    private bool isLocalPlayer;
+    private bool ignoreNextMouseDelta;
+
+    public Vector2 LookRotation => new Vector2(camVelocity.x, -camVelocity.y);
 
     // Usamos Networked para que Photon sincronice este ángulo automáticamente con los demás jugadores
     [Networked] private float networkedTargetPitch { get; set; }
 
     public override void Spawned()
     {
-        bool isLocalPlayer = Object.HasInputAuthority;
+        isLocalPlayer = Object.HasInputAuthority;
         movementController = GetComponentInParent<MovementController>();
 
         GetComponent<Camera>().enabled = isLocalPlayer;
@@ -38,6 +41,34 @@ public class CameraController : NetworkBehaviour
         }
     }
 
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+        {
+            ignoreNextMouseDelta = true;
+        }
+    }
+
+    private void Update()
+    {
+        if (!isLocalPlayer || InputManager.Instance == null ||
+            (movementController != null && (movementController.IsOutOfHealth || movementController.MatchEnded)))
+        {
+            return;
+        }
+
+        if (ignoreNextMouseDelta)
+        {
+            ignoreNextMouseDelta = false;
+            return;
+        }
+
+        Vector2 rawFrameVelocity = InputManager.Instance.GetMouseDelta() * mouseSensitivity;
+        rawFrameVelocity = Vector2.ClampMagnitude(rawFrameVelocity, maxMouseDelta);
+        camVelocity += rawFrameVelocity;
+        camVelocity.y = Mathf.Clamp(camVelocity.y, minAngleY, maxAngleY);
+    }
+
     public override void FixedUpdateNetwork()
     {
         if (movementController != null && (movementController.IsOutOfHealth || movementController.MatchEnded))
@@ -48,19 +79,11 @@ public class CameraController : NetworkBehaviour
         // 1. Verificar si este objeto tiene la autoridad del jugador local
         if (GetInput(out NetworkInfoData input))
         {
-            Vector2 rawFrameVelocity = new Vector2(input.mousePos.x, input.mousePos.y) * mouseSensitivity;
-
-            float smoothFactor = smoothness > 0 ? (1 / smoothness) : 1f;
-            smoothVelocity = Vector2.Lerp(smoothVelocity, rawFrameVelocity, smoothFactor);
-
-            camVelocity += smoothVelocity;
-            camVelocity.y = Mathf.Clamp(camVelocity.y, minAngleY, maxAngleY);
-
             // Guardamos el ángulo vertical en la variable sincronizada por red
-            networkedTargetPitch = -camVelocity.y;
+            networkedTargetPitch = input.lookRotation.y;
 
             // El jugador local rota de inmediato para no tener lag
-            ApplyRotations(networkedTargetPitch, camVelocity.x);
+            ApplyRotations(networkedTargetPitch, input.lookRotation.x);
         }
         else
         {

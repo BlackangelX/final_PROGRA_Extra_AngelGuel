@@ -33,7 +33,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 6.94744, y: 1.31, z: 13.2}
-  m_LocalScale: {x: 0.63915336, y: 0.63915336, z: 0.63915336}
+  m_LocalScale: {x: 0.18, y: 0.18, z: 0.35}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -161,8 +161,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be9bb1b0b0ed6684e8002329d2277ece, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 20
+  speed: 40
   lifeTime: 3
+  isImpactEffect: 0
   impactEffectPrefab: {fileID: 8262803683258481170, guid: 7641ec736b50cc342a0ca28abf75d310, type: 3}
 --- !u!54 &7830112018775551355
 Rigidbody:
@@ -187,7 +188,7 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
-  m_IsKinematic: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 3

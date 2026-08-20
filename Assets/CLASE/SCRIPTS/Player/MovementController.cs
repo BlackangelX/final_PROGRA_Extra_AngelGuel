@@ -154,7 +154,7 @@ public class MovementController : NetworkBehaviour
 
           
          
-            if (data.isShooting)
+            if (data.isShooting && Object.HasStateAuthority)
             {
              
                 if (currentWeapon == null)
@@ -350,10 +350,23 @@ public class MovementController : NetworkBehaviour
     {
         data.movementAxis.Normalize();
 
-        Vector3 moveDirection = transform.forward * data.movementAxis.y + transform.right * data.movementAxis.x;
+        Quaternion yawRotation = Quaternion.Euler(0f, data.lookRotation.x, 0f);
+        transform.rotation = yawRotation;
+
+        if (cameraTransform != null)
+        {
+            cameraTransform.localRotation = Quaternion.AngleAxis(data.lookRotation.y, Vector3.right);
+        }
+
+        NetworkedTargetPitch = data.lookRotation.y;
+
+        Vector3 forward = yawRotation * Vector3.forward;
+        Vector3 right = yawRotation * Vector3.right;
+        Vector3 moveDirection = forward * data.movementAxis.y + right * data.movementAxis.x;
 
         _ncc.maxSpeed = Speed(data);
         _ncc.Move(moveDirection);
+        transform.rotation = yawRotation;
     }
 
     private float Speed(NetworkInfoData data)

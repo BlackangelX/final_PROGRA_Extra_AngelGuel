@@ -31,6 +31,7 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
     private readonly HashSet<PlayerRef> displayedDeaths = new HashSet<PlayerRef>();
     private float messageHideTime;
     private bool finalMessageShown;
+    private CameraController localCameraController;
 
     private void Awake() // es lo primero que sucede al cargar la escena
     {
@@ -183,6 +184,14 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
+        if (localCameraController == null)
+        {
+            NetworkObject localPlayer = runner.GetPlayerObject(runner.LocalPlayer);
+            localCameraController = localPlayer != null
+                ? localPlayer.GetComponentInChildren<CameraController>()
+                : null;
+        }
+
         NetworkInfoData data = new NetworkInfoData()
         {
             movementAxis = InputManager.Instance.GetMoveInput(),
@@ -191,6 +200,7 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
             movingOnXAxis = InputManager.Instance.IsMovingOnXAxis(),
             moveInputPressed = InputManager.Instance.IsMoveInputPressed(),
             mousePos = InputManager.Instance.GetMouseDelta(),
+            lookRotation = localCameraController != null ? localCameraController.LookRotation : Vector2.zero,
             isShooting = InputManager.Instance.IsShooting(),
             isMeleeAttacking = InputManager.Instance.IsMeleeAttacking()
         };

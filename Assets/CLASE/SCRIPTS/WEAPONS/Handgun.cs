@@ -16,20 +16,23 @@ public class Handgun : Weapon
     // El método base que manda a llamar el MovementController
     public override void PhysicShoot()
     {
-        if (!HasInputAuthority) return;
-
-        // Ejecutamos el RPC enviando la información
-        RPC_PhysicShoot();
+        if (!HasStateAuthority) return;
+        SpawnProjectile(Object.InputAuthority);
     }
 
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)] // El cliente da la orden, el Servidor/Host la ejecuta
     public void RPC_PhysicShoot(RpcInfo info = default)
     {
+        SpawnProjectile(info.Source);
+    }
+
+    private void SpawnProjectile(PlayerRef shooter)
+    {
         if (projectile != null && shootPoint != null)
         {
             // El servidor spawnea de forma segura el proyectil en red en la posición del cañón
-            NetworkObject spawnedProjectile = Runner.Spawn(projectile, shootPoint.position, shootPoint.rotation, info.Source, (runner, networkObject) =>
+            Runner.Spawn(projectile, shootPoint.position, shootPoint.rotation, shooter, (runner, networkObject) =>
             {
                 Bullet bullet = networkObject.GetComponent<Bullet>();
                 if (bullet != null)

@@ -9,6 +9,7 @@ public struct NetworkInfoData : INetworkInput
     public bool movingOnXAxis;
     public bool moveInputPressed;
     public Vector2 mousePos;       
+    public Vector2 lookRotation;
     public bool isShooting;
     public bool isMeleeAttacking;
 }
