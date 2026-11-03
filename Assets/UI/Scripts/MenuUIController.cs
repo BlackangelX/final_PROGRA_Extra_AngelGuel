@@ -1,0 +1,238 @@
+using System.Collections.Generic;
+using Fusion;
+using TMPro;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+
+public class MenuUIController : MonoBehaviour
+{
+    [Header("Pantallas")]
+    [SerializeField] private GameObject startPanel;
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject serverListPanel;
+    [SerializeField] private GameObject createMatchPanel;
+    [SerializeField] private GameObject joinMatchPanel;
+
+    [Header("Photon")]
+    [SerializeField] private PhotonManager photonManager;
+
+    [Header("Pantalla Start")]
+    [SerializeField] private TMP_Text startPromptText;
+
+    [Header("Lista de servidores")]
+    [SerializeField] private Transform serverContent;
+    [SerializeField] private Button serverButtonTemplate;
+    [SerializeField] private TMP_Text noServersText;
+    [SerializeField] private TMP_Text serverStatusText;
+
+    [Header("Crear partida")]
+    [SerializeField] private TMP_InputField createNameInput;
+    [SerializeField] private TMP_Dropdown playerCountDropdown;
+    [SerializeField] private Toggle privateToggle;
+    [SerializeField] private TMP_Text createStatusText;
+
+    [Header("Unirse a partida")]
+    [SerializeField] private TMP_InputField joinNameInput;
+    [SerializeField] private TMP_Text joinStatusText;
+
+    private bool waitingForStart = true;
+    private const string StartPrompt = "PRESIONA CUALQUIER TECLA PARA INICIAR";
+    private readonly List<GameObject> generatedServerRows = new List<GameObject>();
+
+    private void OnEnable()
+    {
+        if (photonManager == null)
+        {
+            photonManager = FindFirstObjectByType<PhotonManager>();
+        }
+
+        if (photonManager != null)
+        {
+            photonManager.SessionListChanged += RefreshServerList;
+            photonManager.ConnectionMessageChanged += ShowConnectionMessage;
+        }
+    }
+
+    private void Start()
+    {
+        if (startPromptText == null && startPanel != null)
+        {
+            Transform promptTransform = startPanel.transform.Find("PressKeyText");
+            startPromptText = promptTransform != null
+                ? promptTransform.GetComponent<TMP_Text>()
+                : null;
+        }
+
+        ShowOnly(startPanel);
+        SetMessage(startPromptText, StartPrompt);
+        SetMessage(serverStatusText, string.Empty);
+        SetMessage(createStatusText, string.Empty);
+        SetMessage(joinStatusText, string.Empty);
+    }
+
+    private void OnDisable()
+    {
+        if (photonManager != null)
+        {
+            photonManager.SessionListChanged -= RefreshServerList;
+            photonManager.ConnectionMessageChanged -= ShowConnectionMessage;
+        }
+    }
+
+    private void Update()
+    {
+        if (!waitingForStart || Keyboard.current == null)
+        {
+            return;
+        }
+
+        if (Keyboard.current.anyKey.wasPressedThisFrame)
+        {
+            waitingForStart = false;
+            ConnectAndOpenMenu();
+        }
+    }
+
+    private async void ConnectAndOpenMenu()
+    {
+        SetMessage(startPromptText, "CONECTANDO A PHOTON...");
+
+        if (photonManager == null)
+        {
+            SetMessage(startPromptText, "NO SE ENCONTRO PHOTON\nPRESIONA UNA TECLA PARA REINTENTAR");
+            waitingForStart = true;
+            return;
+        }
+
+        bool connected = await photonManager.ConnectToServerLobby();
+        if (connected)
+        {
+            ShowMainMenu();
+            return;
+        }
+
+        SetMessage(startPromptText, "NO SE PUDO CONECTAR\nPRESIONA UNA TECLA PARA REINTENTAR");
+        waitingForStart = true;
+    }
+
+    public void ShowMainMenu()
+    {
+        ShowOnly(mainMenuPanel);
+    }
+
+    public void ShowServerList()
+    {
+        ShowOnly(serverListPanel);
+        noServersText.gameObject.SetActive(true);
+        noServersText.text = "BUSCANDO SERVIDORES...";
+        photonManager.EnterServerBrowser();
+    }
+
+    public void ShowCreateMatch()
+    {
+        ShowOnly(createMatchPanel);
+        SetMessage(createStatusText, string.Empty);
+    }
+
+    public void ShowJoinMatch()
+    {
+        ShowOnly(joinMatchPanel);
+        SetMessage(joinStatusText, string.Empty);
+    }
+
+    public void CreateGame()
+    {
+        int playerCount = playerCountDropdown.value + 2;
+        SetMessage(createStatusText, "Creando partida...");
+        photonManager.CreateNamedGame(createNameInput.text, playerCount, privateToggle.isOn);
+    }
+
+    public void JoinGameByName()
+    {
+        SetMessage(joinStatusText, "Buscando partida...");
+        photonManager.JoinNamedGame(joinNameInput.text);
+    }
+
+    public void HideAll()
+    {
+        startPanel.SetActive(false);
+        mainMenuPanel.SetActive(false);
+        serverListPanel.SetActive(false);
+        createMatchPanel.SetActive(false);
+        joinMatchPanel.SetActive(false);
+    }
+
+    private void ShowOnly(GameObject selectedPanel)
+    {
+        startPanel.SetActive(selectedPanel == startPanel);
+        mainMenuPanel.SetActive(selectedPanel == mainMenuPanel);
+        serverListPanel.SetActive(selectedPanel == serverListPanel);
+        createMatchPanel.SetActive(selectedPanel == createMatchPanel);
+        joinMatchPanel.SetActive(selectedPanel == joinMatchPanel);
+    }
+
+    private void RefreshServerList(List<SessionInfo> sessions)
+    {
+        foreach (GameObject row in generatedServerRows)
+        {
+            Destroy(row);
+        }
+        generatedServerRows.Clear();
+
+        foreach (SessionInfo session in sessions)
+        {
+            if (!session.IsVisible || !session.IsOpen || session.PlayerCount >= session.MaxPlayers)
+            {
+                continue;
+            }
+
+            Button row = Instantiate(serverButtonTemplate, serverContent);
+            row.gameObject.SetActive(true);
+            row.name = $"Server_{session.Name}";
+
+            TMP_Text label = row.GetComponentInChildren<TMP_Text>();
+            label.text = $"{session.Name}     {session.PlayerCount}/{session.MaxPlayers}     UNIRSE";
+
+            string sessionName = session.Name;
+            row.onClick.AddListener(() => photonManager.JoinNamedGame(sessionName));
+            generatedServerRows.Add(row.gameObject);
+        }
+
+        bool empty = generatedServerRows.Count == 0;
+        noServersText.gameObject.SetActive(empty);
+        noServersText.text = "NO HAY SERVIDORES DISPONIBLES";
+        SetMessage(serverStatusText, empty ? "Prueba creando una partida nueva." : string.Empty);
+    }
+
+    private void ShowConnectionMessage(string message)
+    {
+        if (startPanel.activeSelf)
+        {
+            SetMessage(startPromptText, message);
+        }
+        else if (joinMatchPanel.activeSelf)
+        {
+            SetMessage(joinStatusText, message);
+        }
+        else if (createMatchPanel.activeSelf)
+        {
+            SetMessage(createStatusText, message);
+        }
+        else if (serverListPanel.activeSelf)
+        {
+            SetMessage(serverStatusText, message);
+        }
+    }
+
+    private static void SetMessage(TMP_Text label, string message)
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        label.text = message;
+        label.gameObject.SetActive(!string.IsNullOrEmpty(message));
+    }
+}

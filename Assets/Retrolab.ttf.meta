@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: c0ec65fd2ba9ca446ba33178c525ef8d
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Retrolab
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 3341707faa9c4734991c5dc06b4e3c2e, type: 3}
+  customCharacters: 
+  fontRenderingMode: 1
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
