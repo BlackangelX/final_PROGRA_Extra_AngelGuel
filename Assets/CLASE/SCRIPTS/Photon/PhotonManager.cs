@@ -117,9 +117,15 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
 
             ConnectionMessageChanged?.Invoke(result.Ok
                 ? "Conexión completada."
-                : "No se encuentra la partida.");
+                : BuildConnectionError("No fue posible entrar a la partida", result));
 
             return result;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            ConnectionMessageChanged?.Invoke($"Error de conexión: {exception.Message}");
+            return default;
         }
         finally
         {
@@ -161,9 +167,16 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
             isLobbyConnected = result.Ok;
             ConnectionMessageChanged?.Invoke(result.Ok
                 ? "Conectado."
-                : "No fue posible conectar con Photon.");
+                : BuildConnectionError("No fue posible conectar con Photon", result));
 
             return result.Ok;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            isLobbyConnected = false;
+            ConnectionMessageChanged?.Invoke($"Error de conexión: {exception.Message}");
+            return false;
         }
         finally
         {
@@ -212,6 +225,13 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
         await StartGame(GameMode.Client, cleanName);
     }
 
+    private static string BuildConnectionError(string fallback, StartGameResult result)
+    {
+        return string.IsNullOrWhiteSpace(result.ErrorMessage)
+            ? $"{fallback}."
+            : $"{fallback}: {result.ErrorMessage}";
+    }
+
     #region Metodos de Photon
 
     // Cuando un jugador entra a la partida
@@ -258,7 +278,9 @@ public class PhotonManager : MonoBehaviour, INetworkRunnerCallbacks
     // Cuando te intentas conectar pero no lo logra
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
     {
-        Debug.Log(reason);
+        isLobbyConnected = false;
+        Debug.LogError($"No fue posible conectar a {remoteAddress}: {reason}");
+        ConnectionMessageChanged?.Invoke($"No fue posible conectar: {reason}");
     }
 
     // Cuando empieza a intentar conectarte al servidor
