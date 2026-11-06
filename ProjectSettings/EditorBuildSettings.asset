@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Tareas/Eventos/Scenes/Ejercicios_Eventos.unity
     guid: 6f8de9dbb47388a4d8ee74fbdead1754
+  - enabled: 0
+    path: Assets/Tareas/LoginCreateAccount/Scenes/Tarea04_LoginCreateAccount.unity
+    guid: 1536f8d4994c25648a4e033c497996b3
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
